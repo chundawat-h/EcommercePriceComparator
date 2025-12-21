@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Karo</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="\static\css\style.css">
+</head>
+
+<body>
+
+    <header class="bg-dark py-3">
+        <div class="container">
+            <div class="d-flex justify-content-center">
+                <div class="text-center">
+                    <h1 class="display-5 fw-bold text-white">Compare karo </h1>
+                    <p class="lead text-white-50">Compare prices between Amazon and Flipkart in real-time</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="py-5">
+        <div class="container">
+            <div class="search-container">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="card-title text-center mb-4">Search for a Product</h2>
+                        
+                        <form id="search-form" action="/comparison" method="get">
+                            <div class="mb-3 search-box">
+                                <i class="bi bi-search search-icon"></i>
+                                <input 
+                                    type="text" 
+                                    class="form-control form-control-lg search-input" 
+                                    id="query" 
+                                    name="query" 
+                                    placeholder="Enter product name, brand, or specifications..." 
+                                    required
+                                >
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-arrow-right-circle me-2"></i>Compare Prices
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="mt-5">
+                    <h3 class="text-center mb-4">How It Works</h3>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card h-100 text-center">
+                                <div class="card-body">
+                                    <div class="fs-1 mb-3 text-primary">
+                                        <i class="bi bi-search"></i>
+                                    </div>
+                                    <h5 class="card-title">Search</h5>
+                                    <p class="card-text">Enter any product name, brand, or specifications you're looking for</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100 text-center">
+                                <div class="card-body">
+                                    <div class="fs-1 mb-3 text-primary">
+                                        <i class="bi bi-bar-chart"></i>
+                                    </div>
+                                    <h5 class="card-title">Compare</h5>
+                                    <p class="card-text">We fetch real-time prices and ratings from Amazon and Flipkart</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100 text-center">
+                                <div class="card-body">
+                                    <div class="fs-1 mb-3 text-primary">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <h5 class="card-title">Decide</h5>
+                                    <p class="card-text">Get recommendations on the best platform to buy from</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white-50 py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">
+                &copy; 2023 E-commerce Price Comparator
+            </p>
+            <p class="mb-0 small">
+                This tool helps you compare prices between popular e-commerce platforms.
+                We don't store any of your search data.
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
