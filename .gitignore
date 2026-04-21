@@ -1,0 +1,19 @@
+# Database files
+instance/
+*.sqlite3
+*.db
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv/
+venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
