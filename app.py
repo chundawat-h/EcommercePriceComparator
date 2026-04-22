@@ -9,6 +9,8 @@ from threading import Thread
 from queue import Queue
 import re
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import concurrent.futures
 from datetime import datetime, timedelta
 from flask_sqlalchemy import SQLAlchemy
@@ -41,17 +43,17 @@ with app.app_context():
     db.create_all()
 
 # _________________________________________________SCRAPING______________________________________________________________________________________________________________________________________
-# Note: The API keys will be taken from environment variables with fallbacks
-SCRAPING_BEE_API_KEY = os.getenv("SCRAPING_BEE_API_KEY", "ce5b1f21b70ec889c0668e0f0caf8813")
+# Load API keys from environment variables
+SCRAPER_API_KEY_AMAZON = os.getenv("SCRAPER_API_KEY_AMAZON")
+SCRAPER_API_KEY_FLIPKART = os.getenv("SCRAPER_API_KEY_FLIPKART")
 SCRAPER_API_URL = "https://api.scraperapi.com"
-SCRAPER_API_KEY_flipkart = os.getenv("SCRAPER_API_KEY_FLIPKART", "eecbe0411def14a6601ddad42aa894e1")
 
 # Store active scraping queues
 active_queues = {}
 
 def scrape_amazon(query, queue):
     try:
-        url = f"{SCRAPER_API_URL}?api_key={SCRAPING_BEE_API_KEY}&url=https://www.amazon.in/s?k={query}"
+        url = f"{SCRAPER_API_URL}?api_key={SCRAPER_API_KEY_AMAZON}&url=https://www.amazon.in/s?k={query}"
         response = requests.get(url)
         soup = BeautifulSoup(response.text, "html.parser")
         
@@ -86,7 +88,7 @@ def scrape_amazon(query, queue):
 def fetch_flipkart_product_page(product_url, queue):
     """Stage 2: Fetch and parse a specific product page for exact JSON-LD"""
     params = {
-        'api_key': SCRAPER_API_KEY_flipkart,
+        'api_key': SCRAPER_API_KEY_FLIPKART,
         'url': product_url,
         'premium_proxy': 'true',
         'country_code': 'in'
@@ -138,7 +140,7 @@ def scrape_flipkart(keyword, queue, attempt=1, max_retries=3):
     target_url = f"https://www.flipkart.com/search?q={encoded_keyword}&otracker=search&otracker1=search&marketplace=FLIPKART&as-show=on&as=off"
     
     params = {
-        'api_key': SCRAPER_API_KEY_flipkart,
+        'api_key': SCRAPER_API_KEY_FLIPKART,
         'url': target_url,
         'premium_proxy': 'true',
         'country_code': 'in',
