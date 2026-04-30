@@ -62,7 +62,7 @@
 
   /* ── Fetch ────────────────────────────────────────── */
   function fetchData(q) {
-    fetch('/compare-product?query=' + encodeURIComponent(q))
+    fetch('http://127.0.0.1:5000/compare-product?query=' + encodeURIComponent(q))
       .then(function (r) {
         if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || 'Failed to fetch product data'); });
         return r.json();

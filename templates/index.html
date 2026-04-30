@@ -7,7 +7,7 @@
   <title>Price comparator - find the best deal across Amazon and Flipkart</title>
   <meta name="description"
     content="Compare prices across Amazon and Flipkart in real-time. Find the best deals on laptops, phones, audio gear, TVs, and more.">
-  <link rel="stylesheet" href="/static/css/index.css">
+  <link rel="stylesheet" href="../static/css/index.css">
 </head>
 
 <body>
@@ -25,7 +25,7 @@
     <p class="hero-subtitle">Search any product and instantly compare prices, ratings, and availability between India's
       two biggest e-commerce platforms.</p>
 
-    <form class="search-box" id="search-form" action="/comparison" method="get">
+    <form class="search-box" id="search-form" action="comparison.html" method="get">
       <svg class="search-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8" />
@@ -36,12 +36,12 @@
     </form>
 
     <div class="quick-tags" id="quick-tags">
-      <a class="quick-tag" href="/comparison?query=iPhone+15">iPhone 15</a>
-      <a class="quick-tag" href="/comparison?query=MacBook+Air">MacBook Air</a>
-      <a class="quick-tag" href="/comparison?query=Nike+Air+Max">Nike Air Max</a>
-      <a class="quick-tag" href="/comparison?query=Samsung+TV">Samsung TV</a>
-      <a class="quick-tag" href="/comparison?query=Dyson+V15">Dyson V15</a>
-      <a class="quick-tag" href="/comparison?query=iPad+Pro">iPad Pro</a>
+      <a class="quick-tag" href="comparison.html?query=iPhone+15">iPhone 15</a>
+      <a class="quick-tag" href="comparison.html?query=MacBook+Air">MacBook Air</a>
+      <a class="quick-tag" href="comparison.html?query=Nike+Air+Max">Nike Air Max</a>
+      <a class="quick-tag" href="comparison.html?query=Samsung+TV">Samsung TV</a>
+      <a class="quick-tag" href="comparison.html?query=Dyson+V15">Dyson V15</a>
+      <a class="quick-tag" href="comparison.html?query=iPad+Pro">iPad Pro</a>
     </div>
   </section>
 
@@ -65,35 +65,35 @@
 
   <!-- ─── Category strip (Apple-style icons) ────── -->
   <div class="category-strip" id="category-strip">
-    <a class="category-item" href="/comparison?query=laptop">
+    <a class="category-item" href="comparison.html?query=laptop">
       <div class="category-item-icon">&#x1F4BB;</div>
       <span>Laptops</span>
     </a>
-    <a class="category-item" href="/comparison?query=phone">
+    <a class="category-item" href="comparison.html?query=phone">
       <div class="category-item-icon">&#x1F4F1;</div>
       <span>Phones</span>
     </a>
-    <a class="category-item" href="/comparison?query=headphones">
+    <a class="category-item" href="comparison.html?query=headphones">
       <div class="category-item-icon">&#x1F3A7;</div>
       <span>Audio</span>
     </a>
-    <a class="category-item" href="/comparison?query=television">
+    <a class="category-item" href="comparison.html?query=television">
       <div class="category-item-icon">&#x1F4FA;</div>
       <span>TVs</span>
     </a>
-    <a class="category-item" href="/comparison?query=shoes">
+    <a class="category-item" href="comparison.html?query=shoes">
       <div class="category-item-icon">&#x1F45F;</div>
       <span>Shoes</span>
     </a>
-    <a class="category-item" href="/comparison?query=camera">
+    <a class="category-item" href="comparison.html?query=camera">
       <div class="category-item-icon">&#x1F4F7;</div>
       <span>Cameras</span>
     </a>
-    <a class="category-item" href="/comparison?query=smartwatch">
+    <a class="category-item" href="comparison.html?query=smartwatch">
       <div class="category-item-icon">&#x231A;</div>
       <span>Watches</span>
     </a>
-    <a class="category-item" href="/comparison?query=tablet">
+    <a class="category-item" href="comparison.html?query=tablet">
       <div class="category-item-icon">&#x1F4F2;</div>
       <span>Tablets</span>
     </a>
@@ -115,9 +115,9 @@
     </button>
     <div class="carousel-track" id="trending-track">
 
-      <a class="product-card" href="/comparison?query=Acer+Aspire+Lite">
+      <a class="product-card" href="comparison.html?query=Acer+Aspire+Lite">
         <div class="product-card-img">
-          <img src="/static/images/laptop.png" alt="Acer Aspire Lite laptop" loading="lazy">
+          <img src="../static/images/laptop.png" alt="Acer Aspire Lite laptop" loading="lazy">
         </div>
         <div class="product-card-body">
           <div class="product-card-cat">Laptops</div>
@@ -131,9 +131,9 @@
         </div>
       </a>
 
-      <a class="product-card" href="/comparison?query=Samsung+Galaxy+S24">
+      <a class="product-card" href="comparison.html?query=Samsung+Galaxy+S24">
         <div class="product-card-img">
-          <img src="/static/images/phone.png" alt="Samsung Galaxy S24 smartphone" loading="lazy">
+          <img src="../static/images/phone.png" alt="Samsung Galaxy S24 smartphone" loading="lazy">
         </div>
         <div class="product-card-body">
           <div class="product-card-cat">Smartphones</div>
@@ -147,9 +147,9 @@
         </div>
       </a>
 
-      <a class="product-card" href="/comparison?query=Sony+WH-1000XM5">
+      <a class="product-card" href="comparison.html?query=Sony+WH-1000XM5">
         <div class="product-card-img">
-          <img src="/static/images/headphones.png" alt="Sony WH-1000XM5 headphones" loading="lazy">
+          <img src="../static/images/headphones.png" alt="Sony WH-1000XM5 headphones" loading="lazy">
         </div>
         <div class="product-card-body">
           <div class="product-card-cat">Audio</div>
@@ -163,9 +163,9 @@
         </div>
       </a>
 
-      <a class="product-card" href="/comparison?query=LG+OLED+55+C3">
+      <a class="product-card" href="comparison.html?query=LG+OLED+55+C3">
         <div class="product-card-img">
-          <img src="/static/images/tv.png" alt="LG OLED 55 inch C3 TV" loading="lazy">
+          <img src="../static/images/tv.png" alt="LG OLED 55 inch C3 TV" loading="lazy">
         </div>
         <div class="product-card-body">
           <div class="product-card-cat">Televisions</div>
@@ -179,9 +179,9 @@
         </div>
       </a>
 
-      <a class="product-card" href="/comparison?query=Lenovo+IdeaPad+5">
+      <a class="product-card" href="comparison.html?query=Lenovo+IdeaPad+5">
         <div class="product-card-img">
-          <img src="/static/images/laptop2.png" alt="Lenovo IdeaPad 5 2-in-1 laptop" loading="lazy">
+          <img src="../static/images/laptop2.png" alt="Lenovo IdeaPad 5 2-in-1 laptop" loading="lazy">
         </div>
         <div class="product-card-body">
           <div class="product-card-cat">Laptops</div>
@@ -195,9 +195,9 @@
         </div>
       </a>
 
-      <a class="product-card" href="/comparison?query=Canon+EOS+R50">
+      <a class="product-card" href="comparison.html?query=Canon+EOS+R50">
         <div class="product-card-img">
-          <img src="/static/images/camera.png" alt="Canon EOS R50 camera" loading="lazy">
+          <img src="../static/images/camera.png" alt="Canon EOS R50 camera" loading="lazy">
         </div>
         <div class="product-card-body">
           <div class="product-card-cat">Cameras</div>
