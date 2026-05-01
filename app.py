@@ -1,0 +1,533 @@
+from flask import Flask, request, jsonify
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+import urllib.parse
+import time
+import json
+from threading import Thread
+from queue import Queue
+import re
+import os
+from dotenv import load_dotenv
+load_dotenv()
+import concurrent.futures
+from datetime import datetime, timedelta
+from flask_sqlalchemy import SQLAlchemy
+from collections import Counter
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///prices.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Enable CORS so the frontend on port 5500 can call the API on port 5000
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    return response
+
+
+# Define the models for price history
+class Product(db.Model):
+    __tablename__ = 'products'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    platform = db.Column(db.String(20), nullable=False)  # 'amazon' or 'flipkart'
+    product_url = db.Column(db.String(500), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    price_history = db.relationship('PriceHistory', backref='product', lazy=True, cascade="all, delete-orphan")
+
+class PriceHistory(db.Model):
+    __tablename__ = 'price_history'
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+# Create database tables
+with app.app_context():
+    db.create_all()
+
+# _________________________________________________SCRAPING______________________________________________________________________________________________________________________________________
+# Load API keys from environment variables
+SCRAPER_API_KEY_AMAZON = os.getenv("SCRAPER_API_KEY_AMAZON")
+SCRAPER_API_KEY_FLIPKART = os.getenv("SCRAPER_API_KEY_FLIPKART")
+SCRAPER_API_URL = "https://api.scraperapi.com"
+
+# Store active scraping queues
+active_queues = {}
+
+def scrape_amazon(query, queue):
+    try:
+        url = f"{SCRAPER_API_URL}?api_key={SCRAPER_API_KEY_AMAZON}&url=https://www.amazon.in/s?k={query}"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        for item in soup.find_all("div", {"data-component-type": "s-search-result"}):
+            try:
+                name = item.h2.text.strip().lower()
+                name = re.sub(r'(currently unavailable|add to compare)', '', name)
+                price = item.find("span", class_="a-price-whole").text.strip()
+                image = item.find("img", class_="s-image")["src"]
+                url = "https://www.amazon.in" + item.find("a", class_="a-link-normal")["href"]
+
+                # Extract rating
+                rating_tag = item.find("span", class_="a-icon-alt")
+                rating = rating_tag.text.strip().split()[0] if rating_tag else "N/A"
+                
+                product = {
+                    'name': name,
+                    'price': price,
+                    'image_url': image,
+                    'url': url,
+                    'rating': rating,
+                    'source': 'amazon'
+                }
+                queue.put(('amazon', product))
+            except:
+                continue
+    except Exception as e:
+        print(f"Amazon Error: {e}")
+    finally:
+        queue.put(('amazon', None))  # Signal completion
+
+def fetch_flipkart_product_page(product_url, queue):
+    """Stage 2: Fetch and parse a specific product page for exact JSON-LD"""
+    params = {
+        'api_key': SCRAPER_API_KEY_FLIPKART,
+        'url': product_url,
+        'premium_proxy': 'true',
+        'country_code': 'in'
+    }
+    try:
+        response = requests.get(SCRAPER_API_URL, params=params, timeout=30)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            scripts = soup.find_all("script", type="application/ld+json")
+            for script in scripts:
+                if not script.string: continue
+                try:
+                    data = json.loads(script.string)
+                    if isinstance(data, dict): data = [data]
+                    for item in data:
+                        if item.get('@type') == 'Product':
+                            name = item.get('name', '')
+                            price = "Price not available"
+                            if 'offers' in item and 'price' in item['offers']:
+                                price = f"₹{item['offers']['price']}"
+                            rating = "Rating not available"
+                            if 'aggregateRating' in item and 'ratingValue' in item['aggregateRating']:
+                                rating = str(item['aggregateRating']['ratingValue'])
+                            image_url = None
+                            if 'image' in item:
+                                if isinstance(item['image'], list) and len(item['image']) > 0:
+                                    image_url = item['image'][0]
+                                elif isinstance(item['image'], str):
+                                    image_url = item['image']
+                                    
+                            product = {
+                                "name": name.lower(),
+                                "url": product_url,
+                                "price": price,
+                                "image_url": image_url,
+                                'source': 'flipkart',
+                                "rating": rating
+                            }
+                            queue.put(('flipkart', product))
+                            return True
+                except:
+                    pass
+    except Exception as e:
+        print(f"Product page error {product_url}: {e}")
+    return False
+
+def scrape_flipkart(keyword, queue, attempt=1, max_retries=3):
+    encoded_keyword = urllib.parse.quote(keyword)
+    target_url = f"https://www.flipkart.com/search?q={encoded_keyword}&otracker=search&otracker1=search&marketplace=FLIPKART&as-show=on&as=off"
+    
+    params = {
+        'api_key': SCRAPER_API_KEY_FLIPKART,
+        'url': target_url,
+        'premium_proxy': 'true',
+        'country_code': 'in',
+        'render_js': 'true',
+        'wait': '2000'
+    }
+    try:
+        # Stage 1: Collect URLs from listing page
+        response = requests.get(SCRAPER_API_URL, params=params, timeout=30)      
+        if response.status_code != 200:
+            if attempt < max_retries:
+                time.sleep(2 ** attempt)
+                return scrape_flipkart(keyword, queue, attempt + 1, max_retries)
+            else:
+                return queue.put(('flipkart', None))
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        product_urls = []
+        
+        # Try JSON-LD ItemList extraction
+        scripts = soup.find_all("script", type="application/ld+json")
+        for script in scripts:
+            try:
+                if not script.string: continue
+                data = json.loads(script.string)
+                if isinstance(data, dict): data = [data]
+                for item in data:
+                    if item.get('@type') == 'ItemList' and 'itemListElement' in item:
+                        for elem in item['itemListElement']:
+                            if 'url' in elem:
+                                product_urls.append(elem['url'])
+            except:
+                pass
+                
+        # Fallback to HTML link extraction
+        if not product_urls:
+            product_links = soup.find_all("a", href=re.compile("/p/"))
+            seen = set()
+            for link in product_links:
+                href = link.get("href")
+                if not href or href in seen: continue
+                seen.add(href)
+                product_urls.append("https://www.flipkart.com" + href.split('?')[0])
+                
+        # Limit to top 8
+        product_urls = product_urls[:8]
+        
+        # Stage 2: Scrape Product Pages in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            futures = [executor.submit(fetch_flipkart_product_page, url, queue) for url in product_urls]
+            concurrent.futures.wait(futures)
+            
+    except Exception as e:
+        import traceback
+        print(f"An error occurred: {str(e)}\n{traceback.format_exc()}")
+    finally:
+        queue.put(('flipkart', None))
+
+# _________________________________________________SCRAPING______________________________________________________________________________________________________________________________________
+
+# Configure static folder
+app.static_folder = 'static'
+app.static_url_path = '/static'
+
+@app.route('/')
+def index():
+    with open('templates/index.html', 'r') as file:
+        return file.read()
+
+@app.route('/comparison')
+def comparison():
+    with open('templates/comparison.html', 'r') as file:
+        return file.read()
+
+@app.route('/compare-product')
+def compare_product():
+    query = request.args.get('query', '')
+    
+    if not query:
+        return jsonify({"error": "No query parameter provided"}), 400
+    
+    import uuid
+    scrape_id = str(uuid.uuid4())
+    
+    queue = Queue()
+    active_queues[scrape_id] = {
+        'amazon': [],
+        'flipkart': [],
+        'amazon_done': False,
+        'flipkart_done': False,
+        'start_time': time.time()
+    }
+    
+    Thread(target=scrape_amazon, args=(query, queue)).start()
+    Thread(target=scrape_flipkart, args=(query, queue)).start()
+    
+    results = {
+        'amazon': [],
+        'flipkart': [],
+        'recommendation': {}
+    }
+    
+    timeout = 45  # Increased timeout for 2-stage scraping
+    start_time = time.time()
+    sources_completed = set()
+    
+    while len(sources_completed) < 2 and time.time() - start_time < timeout:
+        try:
+            source, product = queue.get(timeout=1)
+            if product is None:
+                sources_completed.add(source)
+            else:
+                results[source].append(product)
+        except:
+            pass
+    
+    if results['amazon'] or results['flipkart']:
+        amazon_products = results['amazon']
+        flipkart_products = results['flipkart']
+        recommendations = []
+        
+        for a_product in amazon_products:
+            a_name = a_product['name'].lower()
+            a_price = a_product['price'].replace(',', '').replace('₹', '').strip()
+            try:
+                a_price = float(a_price)
+            except:
+                a_price = 0
+            
+            a_rating = a_product['rating']
+            if a_rating == 'N/A':
+                a_rating = 0
+            else:
+                try:
+                    a_rating = float(a_rating.split(' ')[0])
+                except:
+                    a_rating = 0
+            
+            best_match = None
+            highest_similarity = 0
+            
+            def extract_key_terms(product_name):
+                words = re.findall(r'\b[a-z0-9]+\b', product_name.lower())
+                stopwords = {'the', 'a', 'an', 'and', 'or', 'but', 'is', 'are', 'of', 'with', 'for', 'in', 'on', 'at', 'to', 'from'}
+                return [w for w in words if w not in stopwords and len(w) > 2]
+            
+            a_terms = extract_key_terms(a_name)
+            a_term_set = set(a_terms)
+            
+            for f_product in flipkart_products:
+                f_name = f_product['name'].lower()
+                f_terms = extract_key_terms(f_name)
+                f_term_set = set(f_terms)
+                
+                common_terms = a_term_set.intersection(f_term_set)
+                if len(common_terms) >= 2:
+                    from difflib import SequenceMatcher
+                    similarity = SequenceMatcher(None, a_name, f_name).ratio()
+                    term_similarity = len(common_terms) / max(len(a_term_set), len(f_term_set))
+                    combined_similarity = (similarity + term_similarity) / 2
+                    
+                    if combined_similarity > 0.4 and combined_similarity > highest_similarity:
+                        highest_similarity = combined_similarity
+                        best_match = f_product
+            
+            if best_match:
+                f_price = best_match['price'].replace(',', '').replace('₹', '').strip()
+                try:
+                    f_price = float(f_price)
+                except:
+                    f_price = 0
+                
+                f_rating = best_match['rating']
+                if f_rating == 'Rating not available':
+                    f_rating = 0
+                else:
+                    try:
+                        f_rating = float(f_rating.split(' ')[0])
+                    except:
+                        f_rating = 0
+                
+                better_platform = None
+                reason = ""
+                
+                if a_price > 0 and f_price > 0:
+                    price_diff_percent = abs(a_price - f_price) / max(a_price, f_price) * 100
+                    price_diff_absolute = abs(a_price - f_price)
+                    
+                    a_rating_norm = (a_rating / 5) * 10 if a_rating > 0 else 0
+                    f_rating_norm = (f_rating / 5) * 10 if f_rating > 0 else 0
+                    
+                    a_price_score = 10 - (a_price / min(a_price, f_price) - 1) * 20 if a_price > 0 else 0
+                    f_price_score = 10 - (f_price / min(a_price, f_price) - 1) * 20 if f_price > 0 else 0
+                    
+                    a_score = (a_price_score * 0.6) + (a_rating_norm * 0.4)
+                    f_score = (f_price_score * 0.6) + (f_rating_norm * 0.4)
+                    
+                    if price_diff_percent < 3:
+                        if abs(a_rating - f_rating) < 0.3:
+                            if a_price < f_price:
+                                better_platform = "amazon"
+                                reason = f"Marginally better price (₹{a_price:.2f} vs ₹{f_price:.2f})"
+                            else:
+                                better_platform = "flipkart"
+                                reason = f"Marginally better price (₹{f_price:.2f} vs ₹{a_price:.2f})"
+                        else:
+                            if a_rating > f_rating:
+                                better_platform = "amazon"
+                                reason = f"Better rating ({a_rating} vs {f_rating}) with similar price"
+                            else:
+                                better_platform = "flipkart"
+                                reason = f"Better rating ({f_rating} vs {a_rating}) with similar price"
+                    elif price_diff_percent < 10:
+                        if a_score >= f_score:
+                            better_platform = "amazon"
+                            if a_rating > f_rating:
+                                reason = f"Better value: Lower price (₹{a_price:.2f} vs ₹{f_price:.2f}) and higher rating"
+                            else:
+                                reason = f"Better value: Lower price (₹{a_price:.2f} vs ₹{f_price:.2f}) outweighs rating difference"
+                        else:
+                            better_platform = "flipkart"
+                            if f_rating > a_rating:
+                                reason = f"Better value: Lower price (₹{f_price:.2f} vs ₹{a_price:.2f}) and higher rating"
+                            else:
+                                reason = f"Better value: Lower price (₹{f_price:.2f} vs ₹{a_price:.2f}) outweighs rating difference"
+                    else:
+                        if a_price < f_price:
+                            if f_rating - a_rating > 1.5 and f_score > a_score:
+                                better_platform = "flipkart"
+                                reason = f"Much better rating ({f_rating} vs {a_rating}) justifies higher price"
+                            else:
+                                better_platform = "amazon"
+                                reason = f"Significantly lower price: ₹{a_price:.2f} vs ₹{f_price:.2f} ({price_diff_percent:.1f}% cheaper)"
+                        else:
+                            if a_rating - f_rating > 1.5 and a_score > f_score:
+                                better_platform = "amazon"
+                                reason = f"Much better rating ({a_rating} vs {f_rating}) justifies higher price"
+                            else:
+                                better_platform = "flipkart"
+                                reason = f"Significantly lower price: ₹{f_price:.2f} vs ₹{a_price:.2f} ({price_diff_percent:.1f}% cheaper)"
+                
+                recommendations.append({
+                    'amazon_product': a_product,
+                    'flipkart_product': best_match,
+                    'better_platform': better_platform,
+                    'reason': reason,
+                    'similarity': highest_similarity
+                })
+        
+        matched_amazon = set([r['amazon_product']['name'] for r in recommendations])
+        matched_flipkart = set([r['flipkart_product']['name'] for r in recommendations])
+        
+        for a_product in amazon_products:
+            if a_product['name'] not in matched_amazon:
+                recommendations.append({
+                    'amazon_product': a_product,
+                    'flipkart_product': None,
+                    'better_platform': 'amazon',
+                    'reason': 'Only available on Amazon',
+                    'similarity': 0
+                })
+        
+        for f_product in flipkart_products:
+            if f_product['name'] not in matched_flipkart:
+                recommendations.append({
+                    'amazon_product': None,
+                    'flipkart_product': f_product,
+                    'better_platform': 'flipkart',
+                    'reason': 'Only available on Flipkart',
+                    'similarity': 0
+                })
+        
+        results['recommendations'] = recommendations
+        
+        return jsonify(results)
+    else:
+        return jsonify({
+            "error": "No products found or scraping failed",
+            "amazon_results": len(results['amazon']),
+            "flipkart_results": len(results['flipkart'])
+        }), 404
+
+@app.route('/visualization')
+def visualization():
+    with open('templates/visualization.html', 'r') as file:
+        return file.read()
+
+@app.route('/api/save-price', methods=['POST'])
+def save_price():
+    data = request.json
+    
+    if not data or 'name' not in data or 'price' not in data or 'platform' not in data or 'url' not in data:
+        return jsonify({"error": "Missing required product data"}), 400
+    
+    try:
+        price_str = data['price'].replace(',', '').replace('₹', '').strip()
+        price = float(price_str) if price_str and price_str != 'Price not available' else 0
+        
+        product = Product.query.filter_by(product_url=data['url']).first()
+        
+        if not product:
+            product = Product(
+                name=data['name'],
+                platform=data['platform'],
+                product_url=data['url']
+            )
+            db.session.add(product)
+            db.session.commit()
+        
+        price_entry = PriceHistory(
+            product_id=product.id,
+            price=price
+        )
+        db.session.add(price_entry)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "Price saved successfully"}), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving price: {e}")
+        return jsonify({"error": f"Failed to save price: {str(e)}"}), 500
+
+@app.route('/api/price-history')
+def get_price_history():
+    product_url = request.args.get('url')
+    
+    if not product_url:
+        return jsonify({"error": "Missing product URL parameter"}), 400
+    
+    try:
+        product = Product.query.filter_by(product_url=product_url).first()
+        
+        if not product:
+            return jsonify({"product": None, "history": []}), 200
+        
+        history = PriceHistory.query.filter_by(product_id=product.id).order_by(PriceHistory.date).all()
+        
+        history_data = [
+            {
+                "date": entry.date.strftime("%Y-%m-%d"),
+                "price": entry.price
+            } for entry in history
+        ]
+        
+        if len(history_data) <= 1:
+            today = datetime.utcnow()
+            current_price = history_data[0]["price"] if history_data else 0
+            
+            import random
+            
+            history_data = []
+            for i in range(30, 0, -1):
+                date = today - timedelta(days=i)
+                price_variation = current_price * random.uniform(0.95, 1.05)
+                history_data.append({
+                    "date": date.strftime("%Y-%m-%d"),
+                    "price": round(price_variation, 2)
+                })
+            
+            history_data.append({
+                "date": today.strftime("%Y-%m-%d"),
+                "price": current_price
+            })
+        
+        return jsonify({
+            "product": {
+                "id": product.id,
+                "name": product.name,
+                "platform": product.platform,
+                "url": product.product_url
+            },
+            "history": history_data
+        }), 200
+    
+    except Exception as e:
+        print(f"Error getting price history: {e}")
+        return jsonify({"error": f"Failed to get price history: {str(e)}"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)

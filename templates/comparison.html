@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price comparison results</title>
+  <meta name="description" content="Compare product prices between Amazon and Flipkart side by side.">
+  <link rel="stylesheet" href="../static/css/dashboard.css">
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="topbar" id="topbar">
+    <a href="index.html" class="topbar-brand">Price comparator <span class="category">/ <span id="query-label">products</span></span></a>
+    <div class="topbar-search">
+      <input type="text" id="search-input" placeholder="Filter results..." autocomplete="off">
+    </div>
+    <div class="topbar-sort">
+      <label for="sort-select">Sort</label>
+      <select id="sort-select">
+        <option value="default">Default</option>
+        <option value="saving">Biggest saving</option>
+        <option value="price">Lowest price</option>
+        <option value="rating">Rating</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- Filter chips -->
+  <div class="filter-row" id="filter-row">
+    <button class="chip active" data-filter="all">All</button>
+    <button class="chip" data-filter="amazon">Amazon best</button>
+    <button class="chip" data-filter="flipkart">Flipkart best</button>
+    <button class="chip" data-filter="single">Single platform</button>
+  </div>
+
+  <!-- Metric cards -->
+  <div class="metrics-grid" id="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-label">Products</div>
+      <div class="metric-value" id="m-count">—</div>
+      <div class="metric-sub">matched results</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg saving</div>
+      <div class="metric-value" id="m-saving">—</div>
+      <div class="metric-sub">across compared items</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Amazon wins</div>
+      <div class="metric-value" id="m-amazon">—</div>
+      <div class="metric-sub">cheaper on Amazon</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Flipkart wins</div>
+      <div class="metric-value" id="m-flipkart">—</div>
+      <div class="metric-sub">cheaper on Flipkart</div>
+    </div>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="loading-indicator" class="loading-container">
+    <div class="spinner"></div>
+    <div class="loading-text">Fetching products from Amazon and Flipkart…</div>
+    <div class="loading-sub">This may take up to 30 seconds</div>
+  </div>
+
+  <!-- Error container -->
+  <div id="error-container" style="display:none;"></div>
+
+  <!-- Product list -->
+  <div class="product-list" id="product-list" style="display:none;"></div>
+
+  <script src="../static/js/comparison.js"></script>
+</body>
+</html>

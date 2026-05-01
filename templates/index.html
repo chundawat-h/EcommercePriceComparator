@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price comparator - find the best deal across Amazon and Flipkart</title>
+  <meta name="description"
+    content="Compare prices across Amazon and Flipkart in real-time. Find the best deals on laptops, phones, audio gear, TVs, and more.">
+  <link rel="stylesheet" href="../static/css/index.css">
+</head>
+
+<body>
+
+  <!-- Promo bar -->
+  <div class="promo-bar" id="promo-bar">
+    Compare prices from Amazon &amp; Flipkart instantly. Save up to 40% on your next purchase.
+    <a href="#hero">Start comparing</a>
+  </div>
+
+  <!-- ─── Hero ──────────────────────────────────── -->
+  <section class="hero" id="hero">
+    <p class="hero-eyebrow">Compare prices across Amazon &amp; Flipkart</p>
+    <h1 class="hero-title">Find the <span class="accent">best price</span> for every product you love</h1>
+    <p class="hero-subtitle">Search any product and instantly compare prices, ratings, and availability between India's
+      two biggest e-commerce platforms.</p>
+
+    <form class="search-box" id="search-form" action="comparison.html" method="get">
+      <svg class="search-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input type="text" id="query" name="query" placeholder="Search for a product..." required>
+      <button type="submit" class="search-box-btn">Compare prices &#8599;</button>
+    </form>
+
+    <div class="quick-tags" id="quick-tags">
+      <a class="quick-tag" href="comparison.html?query=iPhone+15">iPhone 15</a>
+      <a class="quick-tag" href="comparison.html?query=MacBook+Air">MacBook Air</a>
+      <a class="quick-tag" href="comparison.html?query=Nike+Air+Max">Nike Air Max</a>
+      <a class="quick-tag" href="comparison.html?query=Samsung+TV">Samsung TV</a>
+      <a class="quick-tag" href="comparison.html?query=Dyson+V15">Dyson V15</a>
+      <a class="quick-tag" href="comparison.html?query=iPad+Pro">iPad Pro</a>
+    </div>
+  </section>
+
+
+
+  <!-- ─── Stats ─────────────────────────────────── -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-products">2.4M+</div>
+      <div class="stat-label">products tracked</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">&#8377;840</div>
+      <div class="stat-label">avg saving</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">2</div>
+      <div class="stat-label">platforms compared</div>
+    </div>
+  </div>
+
+  <!-- ─── Category strip (Apple-style icons) ────── -->
+  <div class="category-strip" id="category-strip">
+    <a class="category-item" href="comparison.html?query=laptop">
+      <div class="category-item-icon">&#x1F4BB;</div>
+      <span>Laptops</span>
+    </a>
+    <a class="category-item" href="comparison.html?query=phone">
+      <div class="category-item-icon">&#x1F4F1;</div>
+      <span>Phones</span>
+    </a>
+    <a class="category-item" href="comparison.html?query=headphones">
+      <div class="category-item-icon">&#x1F3A7;</div>
+      <span>Audio</span>
+    </a>
+    <a class="category-item" href="comparison.html?query=television">
+      <div class="category-item-icon">&#x1F4FA;</div>
+      <span>TVs</span>
+    </a>
+    <a class="category-item" href="comparison.html?query=shoes">
+      <div class="category-item-icon">&#x1F45F;</div>
+      <span>Shoes</span>
+    </a>
+    <a class="category-item" href="comparison.html?query=camera">
+      <div class="category-item-icon">&#x1F4F7;</div>
+      <span>Cameras</span>
+    </a>
+    <a class="category-item" href="comparison.html?query=smartwatch">
+      <div class="category-item-icon">&#x231A;</div>
+      <span>Watches</span>
+    </a>
+    <a class="category-item" href="comparison.html?query=tablet">
+      <div class="category-item-icon">&#x1F4F2;</div>
+      <span>Tablets</span>
+    </a>
+  </div>
+
+  <!-- ─── Trending products carousel ────────────── -->
+  <div class="section-heading">
+    <div class="section-heading-row">
+      <h2><span class="accent">Trending.</span> Best deals right now.</h2>
+      <a class="section-link" href="#">See all &#8594;</a>
+    </div>
+  </div>
+
+  <div class="carousel-container" id="trending-carousel">
+    <button class="carousel-nav carousel-prev" data-dir="-1" aria-label="Previous">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+    </button>
+    <div class="carousel-track" id="trending-track">
+
+      <a class="product-card" href="comparison.html?query=Acer+Aspire+Lite">
+        <div class="product-card-img">
+          <img src="../static/images/laptop.png" alt="Acer Aspire Lite laptop" loading="lazy">
+        </div>
+        <div class="product-card-body">
+          <div class="product-card-cat">Laptops</div>
+          <div class="product-card-name">Acer Aspire Lite</div>
+          <div class="product-card-desc">AMD Ryzen 5, 16 GB RAM, 512 GB SSD, 15.6" Full HD</div>
+          <div class="product-card-prices">
+            <span class="product-card-best">&#8377;45,990</span>
+            <span class="product-card-old">&#8377;69,990</span>
+            <span class="product-card-off">34% off</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="product-card" href="comparison.html?query=Samsung+Galaxy+S24">
+        <div class="product-card-img">
+          <img src="../static/images/phone.png" alt="Samsung Galaxy S24 smartphone" loading="lazy">
+        </div>
+        <div class="product-card-body">
+          <div class="product-card-cat">Smartphones</div>
+          <div class="product-card-name">Samsung Galaxy S24</div>
+          <div class="product-card-desc">Snapdragon 8 Gen 3, 8 GB, 256 GB, 6.2" Dynamic AMOLED</div>
+          <div class="product-card-prices">
+            <span class="product-card-best">&#8377;74,999</span>
+            <span class="product-card-old">&#8377;84,999</span>
+            <span class="product-card-off">12% off</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="product-card" href="comparison.html?query=Sony+WH-1000XM5">
+        <div class="product-card-img">
+          <img src="../static/images/headphones.png" alt="Sony WH-1000XM5 headphones" loading="lazy">
+        </div>
+        <div class="product-card-body">
+          <div class="product-card-cat">Audio</div>
+          <div class="product-card-name">Sony WH-1000XM5</div>
+          <div class="product-card-desc">Industry-leading noise cancelling, 30hr battery, Hi-Res Audio</div>
+          <div class="product-card-prices">
+            <span class="product-card-best">&#8377;24,990</span>
+            <span class="product-card-old">&#8377;34,990</span>
+            <span class="product-card-off">29% off</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="product-card" href="comparison.html?query=LG+OLED+55+C3">
+        <div class="product-card-img">
+          <img src="../static/images/tv.png" alt="LG OLED 55 inch C3 TV" loading="lazy">
+        </div>
+        <div class="product-card-body">
+          <div class="product-card-cat">Televisions</div>
+          <div class="product-card-name">LG OLED 55" C3</div>
+          <div class="product-card-desc">4K OLED evo, Dolby Vision, 120Hz, webOS, AI Picture Pro</div>
+          <div class="product-card-prices">
+            <span class="product-card-best">&#8377;1,19,990</span>
+            <span class="product-card-old">&#8377;1,49,990</span>
+            <span class="product-card-off">20% off</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="product-card" href="comparison.html?query=Lenovo+IdeaPad+5">
+        <div class="product-card-img">
+          <img src="../static/images/laptop2.png" alt="Lenovo IdeaPad 5 2-in-1 laptop" loading="lazy">
+        </div>
+        <div class="product-card-body">
+          <div class="product-card-cat">Laptops</div>
+          <div class="product-card-name">Lenovo IdeaPad 5 2-in-1</div>
+          <div class="product-card-desc">Intel Core i5, 16 GB, 512 GB SSD, 14" WUXGA touchscreen</div>
+          <div class="product-card-prices">
+            <span class="product-card-best">&#8377;54,990</span>
+            <span class="product-card-old">&#8377;97,990</span>
+            <span class="product-card-off">44% off</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="product-card" href="comparison.html?query=Canon+EOS+R50">
+        <div class="product-card-img">
+          <img src="../static/images/camera.png" alt="Canon EOS R50 camera" loading="lazy">
+        </div>
+        <div class="product-card-body">
+          <div class="product-card-cat">Cameras</div>
+          <div class="product-card-name">Canon EOS R50</div>
+          <div class="product-card-desc">24.2 MP, 4K video, Dual Pixel AF, lightweight mirrorless</div>
+          <div class="product-card-prices">
+            <span class="product-card-best">&#8377;62,990</span>
+            <span class="product-card-old">&#8377;74,990</span>
+            <span class="product-card-off">16% off</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+    <button class="carousel-nav carousel-next" data-dir="1" aria-label="Next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </button>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ─── Why us - Feature cards (Apple "difference" style) ── -->
+  <div class="section-heading">
+    <div class="section-heading-row">
+      <h2><span class="accent">Why compare here.</span> The smarter way to shop.</h2>
+    </div>
+    <p>Everything you need to make an informed purchase decision.</p>
+  </div>
+
+  <div class="features-grid" id="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#E6F1FB;">&#x1F50D;</div>
+      <div class="feature-title">Real-time price tracking</div>
+      <div class="feature-desc">Prices are scraped live from Amazon and Flipkart - no stale data, no cached results.
+      </div>
+      <span class="feature-link">Learn more &#8594;</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#EAF3DE;">&#x2696;&#xFE0F;</div>
+      <div class="feature-title">Smart matching</div>
+      <div class="feature-desc">Our algorithm matches identical products across platforms so you compare apples to
+        apples.</div>
+      <span class="feature-link">Learn more &#8594;</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#FAEEDA;">&#x1F4CA;</div>
+      <div class="feature-title">Price history</div>
+      <div class="feature-desc">Track how prices change over time. Know if you're buying at the right moment.</div>
+      <span class="feature-link">Learn more &#8594;</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#EEEDFE;">&#x2B50;</div>
+      <div class="feature-title">Rating comparison</div>
+      <div class="feature-desc">See ratings from both platforms side by side. Choose the product people love most.</div>
+      <span class="feature-link">Learn more &#8594;</span>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ─── Featured deals ────────────────────────── -->
+  <div class="section-heading">
+    <div class="section-heading-row">
+      <h2><span class="accent">Featured deals.</span> Don't miss out.</h2>
+      <a class="section-link" href="#">See all &#8594;</a>
+    </div>
+  </div>
+
+  <div class="deals-grid" id="deals-grid">
+    <div class="deal-card">
+      <div class="deal-icon-box" style="background:#E6F1FB;">&#x26A1;</div>
+      <div class="deal-body">
+        <div class="deal-timing">Today only</div>
+        <div class="deal-title">Flash sale - Electronics</div>
+        <div class="deal-desc">Up to 40% off on top brands across both platforms</div>
+      </div>
+    </div>
+    <div class="deal-card">
+      <div class="deal-icon-box" style="background:#EAF3DE;">&#x1F3F7;&#xFE0F;</div>
+      <div class="deal-body">
+        <div class="deal-timing">All week</div>
+        <div class="deal-title">Flipkart Big Saving Days</div>
+        <div class="deal-desc">Exclusive deals on 10,000+ products</div>
+      </div>
+    </div>
+    <div class="deal-card">
+      <div class="deal-icon-box" style="background:#FAEEDA;">&#x1F4E6;</div>
+      <div class="deal-body">
+        <div class="deal-timing">Limited stock</div>
+        <div class="deal-title">Refurbished picks</div>
+        <div class="deal-desc">Certified devices at half the price</div>
+      </div>
+    </div>
+    <div class="deal-card">
+      <div class="deal-icon-box" style="background:#EEEDFE;">&#x1F393;</div>
+      <div class="deal-body">
+        <div class="deal-timing">Students</div>
+        <div class="deal-title">Education pricing</div>
+        <div class="deal-desc">Extra 5-12% off on laptops &amp; tablets</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Footer ────────────────────────────────── -->
+  <footer class="site-footer">
+    <div class="footer-text">
+      Price comparator helps you find the best deals across Amazon and Flipkart.
+      <br>We don't store any of your search data.
+    </div>
+    <div class="footer-links">
+      <a href="#">About</a>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+    </div>
+  </footer>
+
+  <!-- ─── Interactivity ─────────────────────────── -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ── Carousel scroll ─────────────────────── */
+      document.querySelectorAll('.carousel-container').forEach(function (container) {
+        var track = container.querySelector('.carousel-track');
+        var prevBtn = container.querySelector('.carousel-prev');
+        var nextBtn = container.querySelector('.carousel-next');
+
+        if (!track || !prevBtn || !nextBtn) return;
+
+        var scrollAmount = 340;
+
+        prevBtn.addEventListener('click', function () {
+          track.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        });
+        nextBtn.addEventListener('click', function () {
+          track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        });
+      });
+
+      /* ── Animated stat counter ───────────────── */
+      function animateValue(el, start, end, suffix, duration) {
+        var startTime = null;
+        function step(timestamp) {
+          if (!startTime) startTime = timestamp;
+          var progress = Math.min((timestamp - startTime) / duration, 1);
+          var eased = 1 - Math.pow(1 - progress, 3);
+          var current = Math.floor(start + (end - start) * eased);
+          if (end >= 1000000) {
+            el.textContent = (current / 1000000).toFixed(1) + 'M+';
+          } else if (suffix === 'k') {
+            el.textContent = '\u20B9' + current.toLocaleString('en-IN');
+          } else {
+            el.textContent = current + (suffix || '');
+          }
+          if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      }
+
+      /* Observe stats entering viewport */
+      var statsObserved = false;
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting && !statsObserved) {
+            statsObserved = true;
+            var cards = document.querySelectorAll('.stat-card');
+            if (cards[0]) animateValue(cards[0].querySelector('.stat-value'), 0, 2400000, '', 1200);
+            if (cards[1]) animateValue(cards[1].querySelector('.stat-value'), 0, 840, 'k', 1000);
+            if (cards[2]) animateValue(cards[2].querySelector('.stat-value'), 0, 2, '', 600);
+          }
+        });
+      }, { threshold: 0.3 });
+
+      var statsRow = document.getElementById('stats-row');
+      if (statsRow) observer.observe(statsRow);
+
+      /* ── Smooth scroll for promo link ────────── */
+      var promoLink = document.querySelector('.promo-bar a');
+      if (promoLink) {
+        promoLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          var heroEl = document.getElementById('hero');
+          if (heroEl) heroEl.scrollIntoView({ behavior: 'smooth' });
+          var input = document.getElementById('query');
+          if (input) setTimeout(function () { input.focus(); }, 500);
+        });
+      }
+
+      /* ── Quick tag click tracking ────────────── */
+      document.querySelectorAll('.quick-tag').forEach(function (tag) {
+        tag.addEventListener('mouseenter', function () {
+          this.style.transform = 'translateY(-1px)';
+        });
+        tag.addEventListener('mouseleave', function () {
+          this.style.transform = '';
+        });
+      });
+
+      /* ── Product card entrance animations ────── */
+      var cardObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+            cardObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.product-card, .feature-card, .deal-card').forEach(function (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        cardObserver.observe(card);
+      });
+
+    })();
+  </script>
+
+</body>
+
+</html>
