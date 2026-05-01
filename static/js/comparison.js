@@ -1,436 +1,418 @@
-/* ──────────────────────────────────────────────────────
-   Comparison dashboard — vanilla JS, no libraries
-   ────────────────────────────────────────────────────── */
-
-(function () {
-  'use strict';
-
-  /* ── State ────────────────────────────────────────── */
-  let allItems = [];          // normalised recommendation objects
-  let activeFilter = 'all';   // all | amazon | flipkart | single
-  let currentSort = 'default';
-  let searchTerm = '';
-
-  /* ── DOM refs ─────────────────────────────────────── */
-  const $list        = document.getElementById('product-list');
-  const $loading     = document.getElementById('loading-indicator');
-  const $error       = document.getElementById('error-container');
-  const $queryLabel  = document.getElementById('query-label');
-  const $searchInput = document.getElementById('search-input');
-  const $sortSelect  = document.getElementById('sort-select');
-  const $filterRow   = document.getElementById('filter-row');
-
-  /* metric elements */
-  const $mCount    = document.getElementById('m-count');
-  const $mSaving   = document.getElementById('m-saving');
-  const $mAmazon   = document.getElementById('m-amazon');
-  const $mFlipkart = document.getElementById('m-flipkart');
-
-  /* ── Boot ─────────────────────────────────────────── */
-  const params = new URLSearchParams(window.location.search);
-  const query  = params.get('query');
-
-  if (!query) {
-    showError('No search query provided. Please return to the home page and try again.');
-    $loading.style.display = 'none';
-    return;
-  }
-
-  $queryLabel.textContent = query;
-  document.title = 'Price comparator / ' + query;
-  fetchData(query);
-
-  /* ── Events ───────────────────────────────────────── */
-  $searchInput.addEventListener('input', function () {
-    searchTerm = this.value.trim().toLowerCase();
-    render();
-  });
-
-  $sortSelect.addEventListener('change', function () {
-    currentSort = this.value;
-    render();
-  });
-
-  $filterRow.addEventListener('click', function (e) {
-    const chip = e.target.closest('.chip');
-    if (!chip) return;
-    $filterRow.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
-    chip.classList.add('active');
-    activeFilter = chip.dataset.filter;
-    render();
-  });
-
-  /* ── Fetch ────────────────────────────────────────── */
-  function fetchData(q) {
-    fetch('http://127.0.0.1:5000/compare-product?query=' + encodeURIComponent(q))
-      .then(function (r) {
-        if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || 'Failed to fetch product data'); });
-        return r.json();
-      })
-      .then(function (data) {
-        $loading.style.display = 'none';
-        processData(data);
-      })
-      .catch(function (err) {
-        $loading.style.display = 'none';
-        showError('Error: ' + err.message);
-      });
-  }
-
-  /* ── Process API response into normalised items ──── */
-  function processData(data) {
-    allItems = [];
-
-    if ((!data.amazon || data.amazon.length === 0) && (!data.flipkart || data.flipkart.length === 0)) {
-      showError('No products found matching your search criteria.');
-      return;
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the query parameters from the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const query = urlParams.get('query');
+    
+    if (!query) {
+        showError('No search query provided. Please return to the home page and try again.');
+        return;
     }
+    
+    // Update the query display in the UI
+    document.getElementById('query-display').textContent = query;
+    
+    // Show loading state
+    document.getElementById('loading-indicator').style.display = 'flex';
+    
+    // Make the API call to the backend
+    fetchComparisonData(query);
+});
 
-    var recs = data.recommendations || [];
+function fetchComparisonData(query) {
+    fetch(`/compare-product?query=${encodeURIComponent(query)}`)
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Failed to fetch product data');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Hide loading indicator
+            document.getElementById('loading-indicator').style.display = 'none';
+            
+            // Render the results
+            renderResults(data);
+        })
+        .catch(error => {
+            // Hide loading indicator
+            document.getElementById('loading-indicator').style.display = 'none';
+            
+            // Show error message
+            showError(`Error: ${error.message}`);
+        });
+}
 
-    // sort matched first
-    recs.sort(function (a, b) { return b.similarity - a.similarity; });
-
-    recs.forEach(function (rec) {
-      allItems.push(normalise(rec));
-    });
-
-    // if there are no recs, build them from raw lists
-    if (recs.length === 0) {
-      (data.amazon || []).forEach(function (p) {
-        allItems.push(normalise({
-          amazon_product: p,
-          flipkart_product: null,
-          better_platform: 'amazon',
-          reason: 'Only available on Amazon',
-          similarity: 0
-        }));
-      });
-      (data.flipkart || []).forEach(function (p) {
-        allItems.push(normalise({
-          amazon_product: null,
-          flipkart_product: p,
-          better_platform: 'flipkart',
-          reason: 'Only available on Flipkart',
-          similarity: 0
-        }));
-      });
+function renderResults(data) {
+    // Store the data in the original containers for reference
+    const amazonContainer = document.getElementById('amazon-results');
+    const flipkartContainer = document.getElementById('flipkart-results');
+    const recommendationsContainer = document.getElementById('recommendations');
+    
+    // Clear previous results
+    amazonContainer.innerHTML = '';
+    flipkartContainer.innerHTML = '';
+    recommendationsContainer.innerHTML = '';
+    
+    // Check if we have any products to display
+    if ((!data.amazon || data.amazon.length === 0) && 
+        (!data.flipkart || data.flipkart.length === 0)) {
+        showError('No products found matching your search criteria.');
+        return;
     }
-
-    render();
-  }
-
-  /* ── Normalise a recommendation object ───────────── */
-  function normalise(rec) {
-    var ap = rec.amazon_product;
-    var fp = rec.flipkart_product;
-
-    var aPrice = ap ? parsePrice(ap.price) : null;
-    var fPrice = fp ? parsePrice(fp.price) : null;
-
-    var aRating = ap ? parseRating(ap.rating) : null;
-    var fRating = fp ? parseRating(fp.rating) : null;
-
-    // name
-    var name = '';
-    if (ap) name = ap.name;
-    else if (fp) name = fp.name;
-    // clean
-    name = name.replace(/^[\d]+\.\s*/g, '');
-    var ri = name.indexOf('ratings &');
-    if (ri > -1) name = name.substring(0, ri).trim();
-
-    // image
-    var img = null;
-    if (ap && ap.image_url && !ap.image_url.startsWith('data:image/svg')) img = ap.image_url;
-    else if (fp && fp.image_url && !fp.image_url.startsWith('data:image/svg')) img = fp.image_url;
-
-    // savings
-    var savingPct = null;
-    var savingAbs = null;
-    if (aPrice !== null && fPrice !== null && aPrice > 0 && fPrice > 0) {
-      savingAbs = Math.abs(aPrice - fPrice);
-      savingPct = Math.round(savingAbs / Math.max(aPrice, fPrice) * 100);
-    }
-
-    // best rating (pick higher)
-    var bestRating = null;
-    if (aRating !== null && fRating !== null) bestRating = Math.max(aRating, fRating);
-    else if (aRating !== null) bestRating = aRating;
-    else if (fRating !== null) bestRating = fRating;
-
-    // best price (pick lower)
-    var bestPrice = null;
-    if (aPrice !== null && fPrice !== null) bestPrice = Math.min(aPrice, fPrice);
-    else if (aPrice !== null) bestPrice = aPrice;
-    else if (fPrice !== null) bestPrice = fPrice;
-
-    var isSingle = (ap === null || fp === null);
-
-    return {
-      name: name,
-      img: img,
-      aPrice: aPrice,
-      fPrice: fPrice,
-      aRating: aRating,
-      fRating: fRating,
-      bestRating: bestRating,
-      bestPrice: bestPrice,
-      winner: rec.better_platform,
-      reason: rec.reason || '',
-      savingPct: savingPct,
-      savingAbs: savingAbs,
-      similarity: rec.similarity,
-      isSingle: isSingle,
-      amazonProduct: ap,
-      flipkartProduct: fp,
-      rawRec: rec
-    };
-  }
-
-  /* ── Filter + sort + render ──────────────────────── */
-  function render() {
-    var filtered = allItems.filter(function (item) {
-      // chip filter
-      if (activeFilter === 'amazon' && item.winner !== 'amazon') return false;
-      if (activeFilter === 'flipkart' && item.winner !== 'flipkart') return false;
-      if (activeFilter === 'single' && !item.isSingle) return false;
-
-      // search filter
-      if (searchTerm) {
-        var hay = (item.name + ' ' + item.reason).toLowerCase();
-        if (hay.indexOf(searchTerm) === -1) return false;
-      }
-      return true;
-    });
-
-    // sort
-    var sorted = filtered.slice();
-    if (currentSort === 'saving') {
-      sorted.sort(function (a, b) { return (b.savingPct || 0) - (a.savingPct || 0); });
-    } else if (currentSort === 'price') {
-      sorted.sort(function (a, b) { return (a.bestPrice || Infinity) - (b.bestPrice || Infinity); });
-    } else if (currentSort === 'rating') {
-      sorted.sort(function (a, b) { return (b.bestRating || 0) - (a.bestRating || 0); });
-    }
-
-    updateMetrics(sorted);
-    renderList(sorted);
-  }
-
-  /* ── Metrics ──────────────────────────────────────── */
-  function updateMetrics(items) {
-    $mCount.textContent = items.length;
-
-    var totalSaving = 0;
-    var savingCount = 0;
-    var amazonWins = 0;
-    var flipkartWins = 0;
-
-    items.forEach(function (it) {
-      if (it.savingAbs !== null && it.savingAbs > 0) {
-        totalSaving += it.savingAbs;
-        savingCount++;
-      }
-      if (!it.isSingle) {
-        if (it.winner === 'amazon') amazonWins++;
-        if (it.winner === 'flipkart') flipkartWins++;
-      }
-    });
-
-    if (savingCount > 0) {
-      var avgK = (totalSaving / savingCount) / 1000;
-      $mSaving.textContent = '\u20B9' + avgK.toFixed(1) + 'k';
+    
+    // Show results container
+    document.getElementById('results-container').style.display = 'block';
+    
+    // Get the table body for our comparison table
+    const tableBody = document.getElementById('comparison-table-body');
+    tableBody.innerHTML = ''; // Clear previous results
+    
+    // Sort recommendations by similarity (matched products first)
+    if (data.recommendations && data.recommendations.length > 0) {
+        data.recommendations.sort((a, b) => b.similarity - a.similarity);
+        
+        // Render each recommendation as a row in the table
+        data.recommendations.forEach((rec, index) => {
+            const row = document.createElement('tr');
+            
+            // Product information cells
+            let productName = '';
+            let productImage = '';
+            let amazonCell = '';
+            let flipkartCell = '';
+            let recommendationCell = '';
+            
+            // Determine product name and image
+            if (rec.amazon_product) {
+                productName = rec.amazon_product.name;
+                productImage = rec.amazon_product.image_url;
+            } else if (rec.flipkart_product) {
+                productName = rec.flipkart_product.name;
+                productImage = rec.flipkart_product.image_url;
+                
+                // Clean Flipkart product name
+                const ratingsIndex = productName.indexOf('ratings &');
+                if (ratingsIndex > -1) {
+                    productName = productName.substring(0, ratingsIndex).trim();
+                }
+                
+                // Remove numbers at the beginning like "1." or "2."
+                productName = productName.replace(/^\d+\.\s*/g, '');
+            }
+            
+            // If both platforms have the product, prefer Amazon image
+            if (rec.amazon_product && rec.flipkart_product) {
+                productImage = rec.amazon_product.image_url;
+            }
+            
+            // Handle data:image/svg URLs
+            if (!productImage || productImage.startsWith('data:image/svg+xml')) {
+                productImage = 'https://via.placeholder.com/60x60?text=No+Image';
+                console.log("Using placeholder for image in matched product:", productImage);
+            }
+            
+            // Amazon cell content
+            if (rec.amazon_product) {
+                const amazonProduct = rec.amazon_product;
+                // Parse rating to display in green box
+                let amazonRating = amazonProduct.rating;
+                if (amazonRating !== 'N/A') {
+                    try {
+                        amazonRating = parseFloat(amazonRating.split(' ')[0]);
+                    } catch (e) {
+                        amazonRating = 'N/A';
+                    }
+                }
+                
+                amazonCell = `
+                    <div>
+                        <div class="fw-bold">₹${amazonProduct.price}</div>
+                        <div class="mt-2">
+                            <span class="badge bg-success p-2">${amazonRating !== 'N/A' ? amazonRating + '★' : 'N/A'}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                amazonCell = '<span class="text-muted">Not available</span>';
+            }
+            
+            // Flipkart cell content
+            if (rec.flipkart_product) {
+                const flipkartProduct = rec.flipkart_product;
+                // Parse rating to display in green box
+                let flipkartRating = flipkartProduct.rating;
+                if (flipkartRating !== 'Rating not available') {
+                    try {
+                        flipkartRating = parseFloat(flipkartRating.split(' ')[0]);
+                    } catch (e) {
+                        flipkartRating = 'N/A';
+                    }
+                } else {
+                    flipkartRating = 'N/A';
+                }
+                
+                flipkartCell = `
+                    <div>
+                        <div class="fw-bold">${flipkartProduct.price}</div>
+                        <div class="mt-2">
+                            <span class="badge bg-success p-2">${flipkartRating !== 'N/A' ? flipkartRating + '★' : 'N/A'}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                flipkartCell = '<span class="text-muted">Not available</span>';
+            }
+            
+            // Recommendation cell content
+            if (rec.amazon_product && rec.flipkart_product) {
+                const platform = rec.better_platform === 'amazon' ? 'Amazon' : 'Flipkart';
+                const badgeClass = rec.better_platform === 'amazon' ? 'bg-info' : 'bg-warning';
+                
+                recommendationCell = `
+                    <div class="badge ${badgeClass} p-2 w-100">
+                        ${platform} <i class="bi bi-check-circle-fill ms-1"></i>
+                    </div>
+                    <div class="small mt-1">${rec.reason}</div>
+                `;
+            } else if (rec.amazon_product) {
+                recommendationCell = `
+                    <div class="badge bg-info p-2 w-100">
+                        Amazon <i class="bi bi-check-circle-fill ms-1"></i>
+                    </div>
+                    <div class="small mt-1">Only available on Amazon</div>
+                `;
+            } else if (rec.flipkart_product) {
+                recommendationCell = `
+                    <div class="badge bg-warning p-2 w-100">
+                        Flipkart <i class="bi bi-check-circle-fill ms-1"></i>
+                    </div>
+                    <div class="small mt-1">Only available on Flipkart</div>
+                `;
+            }
+            
+            // Encode product data for passing to visualization page
+            console.log("Matched product data:", rec);
+            const productData = encodeURIComponent(JSON.stringify(rec));
+            
+            // Build the complete row
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <img src="${productImage}" alt="${productName}" class="img-thumbnail me-2" style="width: 60px; height: 60px; object-fit: contain;">
+                        <div class="product-name" style="max-width: 190px; overflow: hidden; text-overflow: ellipsis;">
+                            ${productName}
+                        </div>
+                    </div>
+                </td>
+                <td>${amazonCell}</td>
+                <td>${flipkartCell}</td>
+                <td>${recommendationCell}</td>
+                <td>
+                    <a href="/visualization?product_data=${productData}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-graph-up"></i> Details
+                    </a>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
     } else {
-      $mSaving.textContent = '\u2014';
+        // If no recommendations, create individual rows for Amazon and Flipkart products
+        let index = 1;
+        
+        if (data.amazon && data.amazon.length > 0) {
+            data.amazon.forEach(product => {
+                const row = document.createElement('tr');
+                
+                // Create a recommendation object for visualization
+                const rec = {
+                    amazon_product: product,
+                    flipkart_product: null,
+                    better_platform: 'amazon',
+                    reason: 'Only available on Amazon',
+                    similarity: 0
+                };
+                
+                // Debug output to console
+                console.log("Amazon product data:", rec);
+                
+                const productData = encodeURIComponent(JSON.stringify(rec));
+                
+                // Parse rating to display in green box
+                let amazonRating = product.rating;
+                if (amazonRating !== 'N/A') {
+                    try {
+                        amazonRating = parseFloat(amazonRating.split(' ')[0]);
+                    } catch (e) {
+                        amazonRating = 'N/A';
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td>${index++}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="${product.image_url}" alt="${product.name}" class="img-thumbnail me-2" style="width: 60px; height: 60px; object-fit: contain;">
+                            <div class="product-name" style="max-width: 190px; overflow: hidden; text-overflow: ellipsis;">
+                                ${product.name}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <div class="fw-bold">₹${product.price}</div>
+                            <div class="mt-2">
+                                <span class="badge bg-success p-2">${amazonRating !== 'N/A' ? amazonRating + '★' : 'N/A'}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="text-muted">Not available</span></td>
+                    <td>
+                        <div class="badge bg-info p-2 w-100">
+                            Amazon <i class="bi bi-check-circle-fill ms-1"></i>
+                        </div>
+                        <div class="small mt-1">Only available on Amazon</div>
+                    </td>
+                    <td>
+                        <a href="/visualization?product_data=${productData}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-graph-up"></i> Details
+                        </a>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        if (data.flipkart && data.flipkart.length > 0) {
+            data.flipkart.forEach(product => {
+                const row = document.createElement('tr');
+                
+                // Create a recommendation object for visualization
+                const rec = {
+                    amazon_product: null,
+                    flipkart_product: product,
+                    better_platform: 'flipkart',
+                    reason: 'Only available on Flipkart',
+                    similarity: 0
+                };
+                
+                // Debug output to console
+                console.log("Flipkart product data:", rec);
+                
+                const productData = encodeURIComponent(JSON.stringify(rec));
+                
+                // Parse rating to display in green box
+                let flipkartRating = product.rating;
+                if (flipkartRating !== 'Rating not available') {
+                    try {
+                        flipkartRating = parseFloat(flipkartRating.split(' ')[0]);
+                    } catch (e) {
+                        flipkartRating = 'N/A';
+                    }
+                } else {
+                    flipkartRating = 'N/A';
+                }
+                
+                // Check if image URL is valid (not data:image/svg+xml)
+                let imageUrl = product.image_url;
+                if (!imageUrl || imageUrl.startsWith('data:image/svg+xml')) {
+                    imageUrl = 'https://via.placeholder.com/60x60?text=No+Image';
+                    console.log("Using placeholder for Flipkart image URL:", product.image_url);
+                }
+                
+                // Clean Flipkart product name for display
+                let displayName = product.name;
+                
+                // Remove everything after ratings text
+                const ratingsIndex = displayName.indexOf('ratings &');
+                if (ratingsIndex > -1) {
+                    displayName = displayName.substring(0, ratingsIndex).trim();
+                }
+                
+                // Remove numbers at the beginning like "1." or "2."
+                displayName = displayName.replace(/^\d+\.\s*/g, '');
+                
+                row.innerHTML = `
+                    <td>${index++}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="${imageUrl}" alt="${displayName}" class="img-thumbnail me-2" style="width: 60px; height: 60px; object-fit: contain;">
+                            <div class="product-name" style="max-width: 190px; overflow: hidden; text-overflow: ellipsis;">
+                                ${displayName}
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="text-muted">Not available</span></td>
+                    <td>
+                        <div>
+                            <div class="fw-bold">${product.price}</div>
+                            <div class="mt-2">
+                                <span class="badge bg-success p-2">${flipkartRating !== 'N/A' ? flipkartRating + '★' : 'N/A'}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="badge bg-warning p-2 w-100">
+                            Flipkart <i class="bi bi-check-circle-fill ms-1"></i>
+                        </div>
+                        <div class="small mt-1">Only available on Flipkart</div>
+                    </td>
+                    <td>
+                        <a href="/visualization?product_data=${productData}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-graph-up"></i> Details
+                        </a>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
     }
+}
 
-    $mAmazon.textContent = amazonWins;
-    $mFlipkart.textContent = flipkartWins;
-  }
-
-  /* ── Render product list ─────────────────────────── */
-  function renderList(items) {
-    $list.innerHTML = '';
-    $list.style.display = 'flex';
-
-    if (items.length === 0) {
-      $list.innerHTML = '<div class="empty-state">No products match your current filters.</div>';
-      return;
-    }
-
-    items.forEach(function (item) {
-      $list.appendChild(buildCard(item));
+function renderProductList(products, container, platform) {
+    const productsList = document.createElement('div');
+    productsList.className = 'row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4';
+    
+    products.forEach(product => {
+        const productCard = document.createElement('div');
+        productCard.className = 'col';
+        
+        productCard.innerHTML = `
+            <div class="card h-100 product-card">
+                <div class="card-img-container text-center p-2">
+                    <img src="${product.image_url}" class="card-img-top product-image" alt="${product.name}">
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title product-title">${product.name}</h5>
+                    <p class="card-text">
+                        <span class="price">Price: ${platform === 'amazon' ? '₹' : ''}${product.price}</span><br>
+                        <span class="rating">Rating: ${product.rating}</span>
+                    </p>
+                    <a href="${product.url}" target="_blank" class="btn btn-sm btn-primary">View on ${platform === 'amazon' ? 'Amazon' : 'Flipkart'}</a>
+                </div>
+            </div>
+        `;
+        
+        productsList.appendChild(productCard);
     });
-  }
+    
+    container.appendChild(productsList);
+}
 
-  /* ── Build a single product card ─────────────────── */
-  function buildCard(item) {
-    var card = document.createElement('div');
-    card.className = 'product-card';
-
-    /* Col 1 — thumbnail */
-    var thumb = document.createElement('div');
-    thumb.className = 'pc-thumb';
-    if (item.img) {
-      var imgEl = document.createElement('img');
-      imgEl.src = item.img;
-      imgEl.alt = item.name;
-      imgEl.loading = 'lazy';
-      thumb.appendChild(imgEl);
-    } else {
-      thumb.innerHTML = '<svg class="pc-thumb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
-    }
-
-    /* Col 2 — body */
-    var body = document.createElement('div');
-    body.className = 'pc-body';
-
-    var nameEl = document.createElement('div');
-    nameEl.className = 'pc-name';
-    nameEl.textContent = item.name;
-
-    var prices = document.createElement('div');
-    prices.className = 'pc-prices';
-
-    // amazon price
-    var aPriceItem = document.createElement('div');
-    aPriceItem.className = 'pc-price-item';
-    var aPlatLabel = document.createElement('div');
-    aPlatLabel.className = 'pc-price-platform';
-    aPlatLabel.textContent = 'Amazon';
-    var aPriceVal = document.createElement('div');
-    if (item.aPrice !== null) {
-      aPriceVal.className = 'pc-price-value' + (item.winner === 'amazon' && !item.isSingle ? ' best' : '');
-      aPriceVal.textContent = '\u20B9' + item.aPrice.toLocaleString('en-IN');
-    } else {
-      aPriceVal.className = 'pc-price-value na';
-      aPriceVal.textContent = 'N/A';
-    }
-    aPriceItem.appendChild(aPlatLabel);
-    aPriceItem.appendChild(aPriceVal);
-
-    // divider
-    var divider = document.createElement('div');
-    divider.className = 'pc-price-divider';
-
-    // flipkart price
-    var fPriceItem = document.createElement('div');
-    fPriceItem.className = 'pc-price-item';
-    var fPlatLabel = document.createElement('div');
-    fPlatLabel.className = 'pc-price-platform';
-    fPlatLabel.textContent = 'Flipkart';
-    var fPriceVal = document.createElement('div');
-    if (item.fPrice !== null) {
-      fPriceVal.className = 'pc-price-value' + (item.winner === 'flipkart' && !item.isSingle ? ' best' : '');
-      fPriceVal.textContent = '\u20B9' + item.fPrice.toLocaleString('en-IN');
-    } else {
-      fPriceVal.className = 'pc-price-value na';
-      fPriceVal.textContent = 'N/A';
-    }
-    fPriceItem.appendChild(fPlatLabel);
-    fPriceItem.appendChild(fPriceVal);
-
-    prices.appendChild(aPriceItem);
-    prices.appendChild(divider);
-    prices.appendChild(fPriceItem);
-
-    body.appendChild(nameEl);
-    body.appendChild(prices);
-
-    /* Col 3 — right */
-    var right = document.createElement('div');
-    right.className = 'pc-right';
-
-    // winner badge
-    var badge = document.createElement('span');
-    badge.className = 'badge-winner ' + (item.winner === 'amazon' ? 'badge-amazon' : 'badge-flipkart');
-    badge.textContent = item.winner === 'amazon' ? 'Amazon' : 'Flipkart';
-    right.appendChild(badge);
-
-    // saving or single-platform label
-    var savingDiv = document.createElement('div');
-    if (item.savingPct !== null && item.savingPct > 0) {
-      savingDiv.className = 'pc-saving';
-      var pctLine = document.createElement('div');
-      pctLine.className = 'pc-saving-pct';
-      pctLine.textContent = item.savingPct + '% cheaper';
-      var absLine = document.createElement('div');
-      absLine.className = 'pc-saving-abs';
-      absLine.textContent = 'saves \u20B9' + item.savingAbs.toLocaleString('en-IN');
-      savingDiv.appendChild(pctLine);
-      savingDiv.appendChild(absLine);
-    } else if (item.isSingle) {
-      savingDiv.className = 'pc-saving-only';
-      savingDiv.textContent = 'Only on ' + (item.winner === 'amazon' ? 'Amazon' : 'Flipkart');
-    }
-    right.appendChild(savingDiv);
-
-    // star rating
-    var ratingVal = item.bestRating;
-    if (ratingVal !== null) {
-      var ratingRow = document.createElement('div');
-      ratingRow.className = 'pc-rating-row';
-
-      var starsDiv = document.createElement('div');
-      starsDiv.className = 'stars';
-      starsDiv.innerHTML = buildStars(ratingVal);
-
-      var numSpan = document.createElement('span');
-      numSpan.className = 'pc-rating-num';
-      numSpan.textContent = ratingVal.toFixed(1);
-
-      ratingRow.appendChild(starsDiv);
-      ratingRow.appendChild(numSpan);
-      right.appendChild(ratingRow);
-    }
-
-    card.appendChild(thumb);
-    card.appendChild(body);
-    card.appendChild(right);
-
-    return card;
-  }
-
-  /* ── Star SVG builder ────────────────────────────── */
-  function buildStars(rating) {
-    var html = '';
-    var starPath = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
-    for (var i = 1; i <= 5; i++) {
-      if (rating >= i) {
-        // full
-        html += '<span class="star"><svg viewBox="0 0 24 24"><path d="' + starPath + '" class="star-filled"/></svg></span>';
-      } else if (rating >= i - 0.5) {
-        // half — two layered paths
-        html += '<span class="star" style="position:relative;display:inline-block;width:10px;height:10px;">'
-          + '<svg viewBox="0 0 24 24" style="position:absolute;left:0;top:0;"><path d="' + starPath + '" class="star-empty"/></svg>'
-          + '<svg viewBox="0 0 24 24" style="position:absolute;left:0;top:0;clip-path:inset(0 50% 0 0);"><path d="' + starPath + '" class="star-filled"/></svg>'
-          + '</span>';
-      } else {
-        // empty
-        html += '<span class="star"><svg viewBox="0 0 24 24"><path d="' + starPath + '" class="star-empty"/></svg></span>';
-      }
-    }
-    return html;
-  }
-
-  /* ── Helpers ──────────────────────────────────────── */
-  function parsePrice(raw) {
-    if (!raw || raw === 'Price not available') return null;
-    var s = String(raw).replace(/[₹,\s]/g, '');
-    var n = parseFloat(s);
-    return isNaN(n) || n <= 0 ? null : n;
-  }
-
-  function parseRating(raw) {
-    if (!raw || raw === 'N/A' || raw === 'Rating not available') return null;
-    var n = parseFloat(String(raw).split(' ')[0]);
-    return isNaN(n) ? null : n;
-  }
-
-  function showError(msg) {
-    $error.style.display = 'block';
-    $error.innerHTML = '<div class="error-box">' + msg + '<br><a href="/">Return to home</a></div>';
-  }
-
-})();
+function showError(message) {
+    const errorContainer = document.getElementById('error-container');
+    errorContainer.style.display = 'block';
+    errorContainer.innerHTML = `
+        <div class="alert alert-danger">
+            ${message}
+            <div class="mt-3">
+                <a href="/" class="btn btn-primary">Return to Home</a>
+            </div>
+        </div>
+    `;
+}
